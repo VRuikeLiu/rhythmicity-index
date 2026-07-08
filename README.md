@@ -10,10 +10,12 @@ together with a precise, reproducible statement of the formula.
 > that placeholder box is below, and the code that implements it verbatim is in
 > [`rhythmicity.py`](rhythmicity.py).
 
-- **`rhythmicity.py`** — canonical maintained implementation (repo `Common/src`, latest).
-- **`rhythmicity_report_variant.py`** — the earlier variant that generated the RI values
-  printed in the Apr-6 `Final` report (see **Version note** at the bottom). Byte-for-byte
-  the same formula **except** for two documented lines.
+- **`rhythmicity.py`** — the single canonical implementation (**uncapped**; see Version
+  note). Contains the two sub-score functions (`compute_lagged_coherence` /
+  `_curve`, `compute_cycle_consistency`), `compute_rhythmicity_index`, and the
+  `classify_rhythmicity` wrapper.
+- **`METHODS_NOTES.md`** — answers to the three manuscript flags: exact dataset identity
+  (EEG), threshold usage (RI ≥ 2.0 vs the 1.5 screen), and the 2.2% derivation.
 
 ---
 
@@ -126,25 +128,22 @@ Classification cutoffs used throughout the paper: **RI ≥ 2.0 = RHYTHMIC**,
 
 ---
 
-## ⚠️ Version note — reproducing the Apr-6 report's exact RI values
+## Version note — the cap was removed (canonical = uncapped)
 
-The figures in `Ruike_Liu_Project_Report_Final.docx` (e.g. **Figure 5, RI = 2.999**) were
-produced by an earlier variant (`rhythmicity_report_variant.py`). It is identical to the
-current `rhythmicity.py` **except** for two lines:
+**Decision (confirmed):** the manuscript uses the **uncapped** `rhythmicity.py` above.
 
-1. **RHYTHMIC cap.** Report variant caps the top band:
-   `RI = min(2.0 + (strong_gate − 1), 2.999)`. The current code removes the cap
-   (`RI = 2.0 + (strong_gate − 1)`), so the strongest runs can exceed 2.999.
-   *This is why the report's maximum RI is exactly 2.999.*
-2. **Minimal-evidence gate.** The report variant divides the minimal scores by `τ_min`
-   unconditionally; the current code clamps them to 0 at/below `τ_min = 0.1`
-   ("continuous minimal-evidence gate," committed Apr 19). This only shifts fractional
-   index values for near-noise borderline runs; it does not move any RHYTHMIC/WEAKLY
-   boundary in the reported results.
+An earlier variant capped the RHYTHMIC band at `RI = min(2.0 + (strong_gate − 1), 2.999)`
+(which is why an early draft figure showed RI = 2.999). The canonical code removes that
+cap: `RI = 2.0 + (strong_gate − 1)`, so the strongest runs can exceed 2.999.
 
-**To reproduce the paper's printed numbers verbatim, cite `rhythmicity_report_variant.py`
-(the capped variant).** For the metric as currently maintained, use `rhythmicity.py`.
-Decide which the manuscript should present as canonical — see the note I left you.
+**Removing the cap changes none of the reported numbers.** The cap only affected scores
+already ≥ 2.999 — all of which are already RHYTHMIC (RI ≥ 2.0) — so it moves no
+classification boundary. Verified against the Stage 4 reclassification data:
+**RHYTHMIC = 1,805 / 82,265 survivors = 2.2%** under both variants, and every reported
+Spearman correlation and Stage 6 count is unchanged. (A second refinement — the
+"continuous minimal-evidence gate," Apr 19 — was likewise validated to preserve the exact
+oscillatory-run counts.) No figures need re-rendering, since the affected max-RI traces
+are not shown in the manuscript.
 
 ---
 
