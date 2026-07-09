@@ -13,10 +13,17 @@ comparison). Y-axes differ (different amplitudes) but are labelled identically
 |---|---|---|---|---|---|---|---|---|
 | **2A** highest-Q, not a rhythm | net_B / loc0 | 0.749894 | 0.10 | 1 | ≈2 | **63.5** | **1.24** | WEAKLY_RHYTHMIC |
 | **2B** genuine long-period rhythm | net_D / loc1 | 0.005623 | 0.05 | 6 | ≈128 | 0.5 | **2.23** | RHYTHMIC |
-| **2C** genuine short-period rhythm | net_D / loc0 | 0.010000 | 0.05 | 7 | ≈31.5 | 1.6 | **2.44** | RHYTHMIC |
+| **2C** genuine rhythm | net_E / loc0 | 0.005623 | 0.05 | 3 | ≈69 | 1.1 | **3.14** | RHYTHMIC |
+
+**Panel 2C note:** the trace shown is replicate 3 (RI 3.14, period 69). At this gridpoint
+(net_E/loc0, α=0.005623 — sub-critical) only **2 of 10 replicates survive** (rep3 RI 3.14,
+rep8 RI 1.999); their **mean RI is 2.57** and mean period 77.5, which are the values in
+`run_summary.csv`. The panel renders the shipped trace; it is reproducible from
+`src/model.py` via `generate_er_graph(seed=70001)` + `simulate(alpha=0.005623, beta=0.05,
+init_firing=[8119], seed=401203)`.
 
 **Headline it supports:** 2A is the highest-Q run in the whole sweep (Q ≈ 63) yet its
-canonical RI (1.24) is far below the genuine rhythms (2.23, 2.44) — a sharp spectral peak
+canonical RI (1.24) is far below the genuine rhythms (2.23, 3.14) — a sharp spectral peak
 does not imply genuine periodicity.
 
 > **Two corrections vs. the earlier draft** (both flow from using the canonical, uncapped
