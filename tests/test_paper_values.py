@@ -67,6 +67,33 @@ def test_q_and_ri_rank_the_two_runs_oppositely(trace_a):
     assert c["RI"] > a["RI"]
 
 
+# --- Figure 1 / concept schematic -------------------------------------------------
+
+def test_fig1_q_is_identical_across_panels():
+    """Fig 1's premise: all three schematic traces have the same Q (8.5), only shape differs.
+
+    Requires nperseg=2048 — these traces have a 120-sample fundamental, and the paper's
+    default 256 (suited to the 2-6 timestep periods of the simulation traces) cannot
+    resolve the peak and collapses Q to 1.0 for all three.
+    """
+    sys.path.insert(0, str(ROOT / "figures"))
+    from make_fig1_concept import build_trace, NPERSEG
+
+    results = {k: analyze(build_trace(4, mix), fs=1.0, nperseg=NPERSEG)
+               for k, mix in (("a", 0.00), ("b", 0.55), ("c", 1.00))}
+
+    q = [results[k]["Q"] for k in "abc"]
+    assert all(v == pytest.approx(8.5, abs=0.01) for v in q), q
+
+    # phase coherence is ~1 in every panel; only shape consistency and RI move
+    assert all(results[k]["lagged_coherence"] == pytest.approx(1.0, abs=0.01) for k in "abc")
+    shape = [results[k]["mean_cycle_corr"] for k in "abc"]
+    ri = [results[k]["RI"] for k in "abc"]
+    assert shape == sorted(shape), shape
+    assert ri == sorted(ri), ri
+    assert ri[0] < 2.0 <= ri[1] < ri[2]
+
+
 # --- Q-factor convention ----------------------------------------------------------
 
 def test_q_depends_on_nperseg(trace_a):

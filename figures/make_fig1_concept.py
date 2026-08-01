@@ -10,19 +10,37 @@ phases are re-drawn per cycle. A `mix` parameter interpolates between fully re-r
 harmonics (panel a — a different waveform every cycle) and a fixed harmonic set (panel c —
 one waveform repeating exactly). Panel b sits in between.
 
-The annotated metric values are the illustrative targets for the schematic, matching the
-published caption; the point of the figure is the qualitative ordering (Q flat, RI rising),
-not a measurement. All simulation figures (2-4) use measured values throughout.
+Every annotated value is MEASURED here at render time by `src/analyze.py` on the trace that
+is plotted — same as Figures 3 and 4, nothing hardcoded. The script prints what it measured.
+
+Spectral resolution for this figure
+-----------------------------------
+These traces have a fundamental period of 120 samples, so the paper's default Welch setting
+(`nperseg=256`, chosen for the simulation traces whose periods are 2-6 timesteps) gives only
+two cycles per segment and cannot resolve the peak: it reports Q = 1.0 for all three panels.
+This figure therefore measures Q with `nperseg=2048` (~17 cycles per segment), which resolves
+the fundamental and yields Q = 8.5 — identical across all three panels, which is precisely the
+figure's point. The rhythmicity index is measured at the same setting. See the README note on
+Q being resolution-dependent: the setting must suit the period of the signal in hand.
 
 Writes figures/fig1_concept.png
 """
+import sys
 from pathlib import Path
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
+
+from analyze import analyze  # noqa: E402
+
 OUT = Path(__file__).resolve().parent / "fig1_concept.png"
+
+#: Welch segment length suited to the 120-sample fundamental of these schematic traces.
+NPERSEG = 2048
 
 N = 2400
 IDX = np.arange(N)
@@ -74,18 +92,28 @@ def build_trace(seed: int, mix: float, fundamental: float = 2.8,
 
 PANELS = {
     "a": dict(mix=0.00, title="Shape varies each cycle",
-              subtitle="same regular timing — a different waveform every cycle",
-              coherence=1.00, shape=0.35, Q=8.5, RI=2.00),
+              subtitle="same regular timing — a different waveform every cycle"),
     "b": dict(mix=0.55, title="Shape mostly repeats",
-              subtitle="same regular timing — waveform largely consistent",
-              coherence=1.00, shape=0.76, Q=8.5, RI=2.90),
+              subtitle="same regular timing — waveform largely consistent"),
     "c": dict(mix=1.00, title="Shape repeats exactly",
-              subtitle="same regular timing — one waveform repeating",
-              coherence=1.00, shape=1.00, Q=8.5, RI=3.50),
+              subtitle="same regular timing — one waveform repeating"),
 }
 
 apply_style()
 traces = {k: build_trace(4, v["mix"]) for k, v in PANELS.items()}
+
+# Measure each plotted trace — Q, phase coherence, shape consistency and RI.
+measured = {k: analyze(traces[k], fs=1.0, nperseg=NPERSEG) for k in PANELS}
+
+print(f"measured with nperseg={NPERSEG} (fundamental period {PERIOD} samples):")
+for k in "abc":
+    m = measured[k]
+    print(f"  {k}  Q = {m['Q']:.2f}   phase coherence = {m['lagged_coherence']:.2f}   "
+          f"shape consistency = {m['mean_cycle_corr']:.2f}   RI = {m['RI']:.2f} "
+          f"({m['rhythmicity_class']})")
+q_values = {round(measured[k]["Q"], 2) for k in "abc"}
+print(f"  Q is {'identical' if len(q_values) == 1 else 'NOT identical'} across panels: "
+      f"{sorted(q_values)}  <- the figure's point")
 
 show = slice(0, 1080)
 tt = IDX[show]
@@ -93,6 +121,7 @@ fig, axes = plt.subplots(3, 1, figsize=(7.4, 6.6), sharex=True)
 
 for ax, key in zip(axes, "abc"):
     spec = PANELS[key]
+    m = measured[key]
     ax.plot(tt, traces[key][show], color=FOCAL, lw=1.4)
     ax.set_yticks([])
     for side in ("left", "top", "right"):
@@ -102,9 +131,9 @@ for ax, key in zip(axes, "abc"):
             fontsize=8, fontweight="bold")
     ax.text(0.0, 1.06, spec["subtitle"], transform=ax.transAxes, ha="left", va="top",
             fontsize=6.4, color="0.4")
-    label = (f"phase coherence = {spec['coherence']:.2f}\n"
-             f"shape consistency = {spec['shape']:.2f}\n"
-             f"$Q$ = {spec['Q']:.1f}       RI = {spec['RI']:.2f}")
+    label = (f"phase coherence = {m['lagged_coherence']:.2f}\n"
+             f"shape consistency = {m['mean_cycle_corr']:.2f}\n"
+             f"$Q$ = {m['Q']:.1f}       RI = {m['RI']:.2f}")
     ax.text(1.0, 1.17, label, transform=ax.transAxes, ha="right", va="top",
             fontsize=6.3, family="DejaVu Sans Mono", color="0.15",
             bbox=dict(boxstyle="round,pad=0.35", fc="#f4f6fa", ec="0.7", lw=0.5))

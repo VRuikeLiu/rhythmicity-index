@@ -11,30 +11,49 @@ from the outermost bins above half peak power. Q is resolution-dependent — see
 this directory, so the committed images, the scripts, and `tests/test_paper_values.py` are
 mutually consistent — re-running a script reproduces the committed file. `fig2_extinction.png`
 is byte-identical to the image in the published manuscript. Figures 1, 3 and 4 are equivalent
-but not byte-identical, for two reasons: font availability and matplotlib version affect
-rasterisation, and the published Fig 3 panel labels were typeset as "Q ≈ 63" whereas the script
-now prints the *measured* 63.5 (formatting 63.5 to zero decimals rounds to 64, which would have
-contradicted the manuscript text — hence one decimal place). No underlying data, parameter or
-metric value differs.
+but not byte-identical: font availability and matplotlib version affect rasterisation, and two
+annotations now show measured rather than hand-carried numbers — Fig 3 prints Q = 63.5 where the
+manuscript typeset "≈63" (rounding 63.5 to an integer would print 64 and contradict the text),
+and Fig 1's shape-consistency and RI values differ in the second decimal (see the Fig 1 section
+below). No underlying data, parameter, or qualitative claim differs anywhere.
+
+**Measured vs. hardcoded.** Every annotated number in every figure is now computed at render
+time from the plotted trace. Nothing is hardcoded — which is what let the figures and Table 1
+drift apart in earlier revisions of this repo.
 
 ---
 
 ## Fig 1 — Q is blind to waveform shape (`fig1_concept.png`)
 
-**Schematic, not simulation output.** Three traces sharing identical regular timing (period
-120 samples in every panel), so their spectral peaks — and therefore their Q-factors — are
-essentially the same. Only shape consistency differs.
+**Schematic traces, but measured values.** The three traces are synthetic (not simulation
+output), constructed to share identical regular timing — a 120-sample fundamental in every
+panel — so their spectral peaks, and therefore their Q-factors, come out the same. Only shape
+consistency differs. All annotated values are measured at render time by `src/analyze.py`.
 
-| Panel | Construction | phase coherence | shape consistency | Q | RI |
-|---|---|---|---|---|---|
-| **1a** shape varies each cycle | harmonics re-randomised every cycle (`mix = 0.00`) | 1.00 | 0.35 | 8.5 | 2.00 |
-| **1b** shape mostly repeats | interpolated (`mix = 0.55`) | 1.00 | 0.76 | 8.5 | 2.90 |
-| **1c** shape repeats exactly | one fixed harmonic set (`mix = 1.00`) | 1.00 | 1.00 | 8.5 | 3.50 |
+| Panel | Construction | phase coherence | shape consistency | Q | RI | class |
+|---|---|---|---|---|---|---|
+| **1a** shape varies each cycle | harmonics re-randomised every cycle (`mix = 0.00`) | 1.00 | 0.38 | **8.50** | **2.00** | WEAKLY_RHYTHMIC |
+| **1b** shape mostly repeats | interpolated (`mix = 0.55`) | 1.00 | 0.74 | **8.50** | **2.84** | RHYTHMIC |
+| **1c** shape repeats exactly | one fixed harmonic set (`mix = 1.00`) | 1.00 | 0.97 | **8.50** | **3.42** | RHYTHMIC |
 
-The annotated values are the illustrative targets for the schematic, matching the published
-caption. This is the only figure whose numbers are not measurements — its purpose is the
-qualitative ordering (Q flat across all three, RI rising monotonically). Figures 2–4 are
-measured throughout.
+Q is **identical to two decimals across all three panels (8.50)** — which is the figure's whole
+point — while RI rises monotonically with shape consistency and crosses the rhythmic boundary
+between 1a and 1b.
+
+**Spectral resolution for this figure.** Q must be measured at `nperseg = 2048` here, not the
+paper's default 256. The default suits the simulation traces, whose periods are 2-6 timesteps;
+against a 120-sample fundamental it fits only two cycles per segment, fails to resolve the peak,
+and returns Q = 1.0 for all three panels. At 2048 (~17 cycles per segment) the fundamental
+resolves and Q = 8.5. This is the same resolution-dependence documented in the README, and a
+concrete illustration of why the segment length must suit the period of the signal in hand.
+
+**Small differences from the published caption.** The manuscript caption reports shape
+consistency 0.35 / 0.76 / 1.00 and RI 2.00 / 2.90 / 3.50; measurement gives 0.38 / 0.74 / 0.97
+and 2.00 / 2.84 / 3.42. The differences are in the second decimal, arise because the published
+caption values were carried by hand rather than read from a measurement pass, and change
+nothing about the figure: Q identical across panels, phase coherence 1.00 throughout, RI rising
+monotonically, and 1a below the rhythmic boundary with 1b and 1c above it. The repo reports the
+measured values because they are what the committed code produces.
 
 **Headline it supports:** Q responds only to timing regularity, so it cannot distinguish the
 non-repeating signal in 1a from the true rhythm in 1c. RI, which additionally requires shape

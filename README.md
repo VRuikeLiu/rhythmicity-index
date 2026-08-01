@@ -84,6 +84,13 @@ outermost bins above half peak power. **Changing `nperseg` changes Q substantial
 highest-Q trace reads 63.5 at 256 and 84.7 at 512. `src/spectral.py` defaults to the paper's
 convention, and `tests/test_paper_values.py` pins it.
 
+The segment length must also suit the *period* of the signal. The 256 default is right for the
+simulation traces (periods of 2-6 timesteps) but too short for Figure 1's schematic traces
+(120-sample fundamental), where it fits two cycles per segment, fails to resolve the peak, and
+collapses Q to 1.0. `make_fig1_concept.py` therefore measures at `nperseg=2048`, which resolves
+the fundamental and gives Q = 8.5 — identical across its three panels, which is that figure's
+point. Pass `nperseg=` to `analyze()` when your own signal's period calls for it.
+
 ## Repository layout
 
 ```
