@@ -1,81 +1,170 @@
 # Rhythmicity Index
 
-Reference implementation and reproducibility materials for the **Rhythmicity Index (RI)** —
-a measure of whether a neural activity time series is *genuinely periodic* (a repeating
-waveform), as opposed to merely having a sharp spectral peak. From the project
-*"Neural cascade oscillation study"* by Ruike (Vincent) Liu.
+Reference implementation and reproducibility materials for the paper
 
-A reviewer can (a) read the method and confirm it matches the paper, and (b) regenerate
-the figures from small processed data files — **without** rerunning 250,000 simulations or
-downloading multi-GB raw traces.
+> **Rhythmicity Index: Signifying Shape Coherence in Addition to Phase Coherence**
+
+A signal with a sharp spectral peak is routinely called an oscillation. This repository
+contains the code behind a demonstration that spectral sharpness alone does not establish
+that a waveform actually *repeats* — and a **rhythmicity index (RI)** that tests periodicity
+in the time domain instead, by requiring phase consistency **and** shape consistency at the
+same time.
+
+The headline result: across roughly 250,000 simulated runs, the single sharpest-spectrum
+signal in the entire sweep (Q ≈ 63.5) is broadband noise with no repeating waveform
+(RI = 1.62), while a run with less than half its Q (28.3) repeats cleanly every cycle
+(RI = 3.49). Q and RI rank the two in opposite orders. The same index, developed entirely on
+simulated signals and applied unchanged to human EEG, recovers the Berger effect.
+
+Everything the paper reports about individual signals is reproducible here from small
+processed files — **no rerunning of 250,000 simulations and no multi-GB downloads.**
+
+## Quickstart
+
+```bash
+pip install -r requirements.txt
+pytest -q                       # verify the published numbers reproduce (~18 s)
+python figures/make_fig1_concept.py
+python figures/make_fig2_extinction.py
+python figures/make_fig3_contrast.py    # regenerates its trace from seed (~10 s)
+python figures/make_fig4_eeg.py
+```
+
+Score any signal of your own with both measures:
+
+```python
+import sys; sys.path.insert(0, "src")
+from analyze import analyze
+
+res = analyze(my_signal, fs=1.0)        # fs=160.0 for the EEG recordings
+print(res["Q"], res["RI"], res["rhythmicity_class"])
+```
+
+## The rhythmicity index
+
+RI is computed from three quantities measured on the activity time series `A(t)`:
+
+| Symbol | Quantity | Reference |
+|---|---|---|
+| `c` | three-cycle lagged coherence — phase consistency, windows exactly 3 cycles long | Fransen et al. 2015 |
+| `c̄` | mean lagged coherence — the same measure averaged over window lengths 1…10 cycles | Fransen et al. 2015 |
+| `r` | mean cycle correlation — Pearson `r` between successive peak/trough-aligned, resampled cycles | Cole & Voytek 2019 |
+
+Each is divided by a threshold to give a "fraction of the passing bar", then combined:
+
+```
+Φ  = max(c/0.5, c̄/0.35)          Ψ  = r/0.4              # phase / shape evidence
+g_s = min(Φ, Ψ)                                           # strong gate  (AND)
+
+Φ_w = max(c/0.3, c̄/0.25)         Ψ_w = r/0.2              # looser thresholds
+Φ_0 = max(c, c̄)/0.1              Ψ_0 = r/0.1              # minimal evidence, 0 if numerator <= 0.1
+g_w = max( min(Φ_w, Ψ_0), min(Ψ_w, Φ_0) )                 # intermediate gate
+
+RI  =  2 + (g_s - 1)                     if g_s >= 1       # RHYTHMIC        (RI >= 2)
+       min(1 + (g_w - 1), 1.999)         elif g_w >= 1     # WEAKLY_RHYTHMIC (1 <= RI < 2)
+       min(max(g_s, g_w), 0.999)         otherwise         # ARRHYTHMIC      (RI < 1)
+```
+
+The structure is **OR within a criterion, AND across criteria**. The `max` in `Φ` is
+deliberately lenient: the two coherence estimators detect regularity at different timescales
+and fail in opposite ways, so a signal is credited with phase consistency if it is regular at
+*either* timescale. All of the strictness lives in the `min` of `g_s` — the AND across phase
+and shape — which is what prevents a spectrally sharp but non-repeating signal from scoring
+highly. The thresholds are reasonable settings, not tuned constants; what the paper's results
+rely on is the *ordering* the index produces.
+
+Implemented in [`src/rhythmicity.py`](src/rhythmicity.py) (`compute_rhythmicity_index`,
+`classify_rhythmicity`).
+
+### A note on Q
+
+Q is resolution-dependent, so the estimator settings are part of the measurement. The paper
+uses Welch with `nperseg = min(256, len(signal))` and takes the half-power bandwidth from the
+outermost bins above half peak power. **Changing `nperseg` changes Q substantially** — the same
+highest-Q trace reads 63.5 at 256 and 84.7 at 512. `src/spectral.py` defaults to the paper's
+convention, and `tests/test_paper_values.py` pins it.
 
 ## Repository layout
 
 ```
 rhythmicity-index/
-├── README.md              — this file
-├── METHODS_NOTES.md       — exact RI formula, EEG dataset identity, threshold usage, the 2.2% derivation
-├── requirements.txt
-├── LICENSE                — MIT
 ├── src/
-│   ├── rhythmicity.py     — THE core deliverable: lagged coherence + cycle consistency + compute_rhythmicity_index + classify_rhythmicity (canonical, uncapped)
-│   ├── model.py           — Erdos–Renyi graph + Greenberg–Hastings cascade (the "controlled signal generator")
-│   └── eeg_validation.py  — EEGMMIDB loader (mne.datasets.eegbci) + per-epoch RI (same RI applied to real EEG)
+│   ├── rhythmicity.py   — the core deliverable: lagged coherence, cycle consistency,
+│   │                      compute_rhythmicity_index, classify_rhythmicity
+│   ├── spectral.py      — Welch PSD + Q-factor (the baseline RI is compared against)
+│   ├── analyze.py       — one-call wrapper: Q and RI for any signal
+│   ├── model.py         — Erdős–Rényi graph + Greenberg–Hastings cascade (signal generator)
+│   └── eeg_validation.py— EEGMMIDB loader (mne.datasets.eegbci) + per-epoch RI
 ├── figures/
-│   ├── make_fig2_contrast.py   — Fig 2: Q-factor vs. true periodicity (3-panel)
-│   ├── make_fig4_extinction.py — Fig 4: survival/extinction threshold vs. alpha
-│   ├── make_fig_eeg.py         — Fig 3: EEG eyes-open vs eyes-closed RI
-│   ├── CAPTIONS.md             — exact (alpha, beta, network, replicate) + canonical RI for every panel
-│   └── *.png                   — rendered figures (300 dpi)
-└── data/
-    ├── run_summary.csv         — one row per (network, location, alpha, beta) gridpoint:
-    │                             extinction_prob, mean_activity, amplitude, period, Q, RI (canonical), class
-    ├── example_traces/         — the 3 activity traces behind Fig 2 (.npy and .csv)
-    └── eeg_rhythmicity.csv      — per-subject, per-condition mean RI (20 subjects × {EO, EC})
+│   ├── make_fig1_concept.py     — Fig 1: Q is blind to shape (schematic)
+│   ├── make_fig2_extinction.py  — Fig 2: extinct–active transition
+│   ├── make_fig3_contrast.py    — Fig 3 + Table 1: highest-Q vs highest-RI run
+│   ├── make_fig4_eeg.py         — Fig 4: EEG Berger effect
+│   ├── CAPTIONS.md              — run identities and measured values for every panel
+│   └── fig*.png                 — rendered figures, 300 dpi
+├── data/
+│   ├── run_summary.csv          — one row per (network, location, α, β) gridpoint
+│   ├── eeg_rhythmicity.csv      — per-subject, per-condition mean RI (20 subjects × {EO, EC})
+│   └── example_traces/          — the shipped highest-Q activity trace (.npy and .csv)
+└── tests/test_paper_values.py   — regression tests pinning the published numbers
 ```
 
-## The rhythmicity index, in one paragraph
+### Figure numbering
 
-RI combines two scores computed on the post-burn-in activity window `A(t)`:
-**phase consistency** (lagged coherence; Fransen et al. 2015) and **shape consistency**
-(cycle-to-cycle Pearson correlation; Cole & Voytek 2019). They are combined by a
-**min-of-two-gates (logical AND) rule** mapped onto three bands — `RI ≥ 2.0` RHYTHMIC,
-`1.0 ≤ RI < 2.0` WEAKLY_RHYTHMIC, `RI < 1.0` ARRHYTHMIC — so a run scores high only when
-phase *and* shape are both strong (a sharp spectral peak alone is not enough). The exact
-formula, thresholds, and a compact equation are in **[METHODS_NOTES.md](METHODS_NOTES.md)**
-and implemented verbatim in [`src/rhythmicity.py`](src/rhythmicity.py).
+Figure numbers here match the **published** manuscript. Earlier revisions of this repo used a
+different numbering (the extinction figure was "Fig 4", the contrast figure "Fig 2"); those
+files have been removed rather than left to confuse. Figure 1 is a schematic and takes no
+input data; Figures 2 and 4 read the processed tables; Figure 3 regenerates its second trace
+from the model seed.
 
-## Reproduce the figures
+## Data notes
 
-```bash
-pip install -r requirements.txt
-python figures/make_fig2_contrast.py     # Fig 2  (reads data/example_traces/)
-python figures/make_fig4_extinction.py   # Fig 4  (reads data/run_summary.csv)
-python figures/make_fig_eeg.py           # Fig 3  (reads data/eeg_rhythmicity.csv)
-```
+**`data/run_summary.csv`** is aggregated **per gridpoint** — each row averages the surviving
+replicates at one (network, location, α, β) cell. It is the right file for the extinction
+transition and for population-level views, but note that the per-gridpoint means are *not* the
+individual-run values in Figure 3 / Table 1: aggregation flattens extremes, so the largest Q in
+this table is 42.5, whereas the single sharpest *run* in the sweep reaches 63.5. Individual-run
+values are reproduced from the shipped trace and the model seed
+(see `figures/make_fig3_contrast.py`), not read from this table.
 
-To rebuild a network and generate a fresh activity series from scratch:
+**`data/example_traces/fig3A_highestQ.npy`** is the activity trace of that single highest-Q
+run, shipped because it comes from the robustness sweep. The highest-RI run is not shipped —
+it is regenerated exactly from `generate_er_graph(N=20000, K=200, seed=12345)` plus
+`simulate(alpha=0.562341, beta=1.00, n_steps=2500, init_firing=1, seed=0)`.
 
-```python
-from src.model import generate_er_graph, simulate
-adj = generate_er_graph(N=20_000, K=200, seed=12345)
-A_t = simulate(adj, alpha=0.010, beta=0.05, n_steps=2000, init_firing=1, seed=0)
-```
+**Effect size in the EEG validation.** The manuscript reports Cohen's d = 1.08. Recomputing
+from `data/eeg_rhythmicity.csv` gives a *larger* effect — paired dz = 1.69, pooled d = 1.94
+(19/20 subjects increase when the eyes close) — and `make_fig4_eeg.py` prints these. The
+manuscript value is the more conservative of the two; the direction, the group means
+(0.57 → 1.52) and the "large effect" characterization are unaffected.
 
 ## Data & code availability
 
 - **Human EEG:** EEG Motor Movement/Imagery Database (EEGMMIDB), PhysioNet
   (Schalk et al. 2004; Goldberger et al. 2000),
   https://physionet.org/content/eegmmidb/1.0.0/. Downloads automatically via
-  `mne.datasets.eegbci`; no EDF files are committed here.
-- **Simulation data:** the processed `data/run_summary.csv` and the three example traces are
-  included. Full raw per-run traces (≈250k runs) are not committed; `src/model.py` rebuilds
-  any network from its seed.
+  `mne.datasets.eegbci`; runs R01 (eyes-open) and R02 (eyes-closed), first 20 subjects,
+  occipital channels, 4-second epochs, 8–13 Hz. No EDF files are committed.
+- **Simulation:** the processed `run_summary.csv` and one example trace are included. Full raw
+  per-run traces (~250k runs) are not committed; `src/model.py` rebuilds any network from its
+  seed, so any run is reproducible from (N, K, graph seed, α, β, run seed).
 
-## Citation
+## References
 
-> Liu, R. V. *Neural cascade oscillation study* (2026). Rhythmicity Index code and data,
-> https://github.com/VRuikeLiu/rhythmicity-index
+- Cole, S. R., & Voytek, B. (2017). Brain oscillations and the importance of waveform shape.
+  *Trends in Cognitive Sciences*, 21(2), 137–149.
+- Cole, S. R., & Voytek, B. (2019). Cycle-by-cycle analysis of neural oscillations.
+  *Journal of Neurophysiology*, 122(2), 849–861.
+- Fransen, A. M. M., van Ede, F., & Maris, E. (2015). Identifying neuronal oscillations using
+  rhythmicity. *NeuroImage*, 118, 256–267.
+- Greenberg, J. M., & Hastings, S. P. (1978). Spatial patterns for discrete models of diffusion
+  in excitable media. *SIAM Journal on Applied Mathematics*, 34(3), 515–523.
+- Kinouchi, O., & Copelli, M. (2006). Optimal dynamical range of excitable networks at
+  criticality. *Nature Physics*, 2(5), 348–351.
+- Schalk, G., McFarland, D. J., Hinterberger, T., Birbaumer, N., & Wolpaw, J. R. (2004).
+  BCI2000: A general-purpose brain-computer interface system. *IEEE TBME*, 51(6), 1034–1043.
+- Goldberger, A. L., et al. (2000). PhysioBank, PhysioToolkit, and PhysioNet.
+  *Circulation*, 101(23), e215–e220.
 
 ## License
 

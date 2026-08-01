@@ -2,4 +2,5 @@ numpy>=1.24
 scipy>=1.10
 pandas>=2.0
 matplotlib>=3.7
-mne>=1.5          # only needed for src/eeg_validation.py (downloads EEGMMIDB)
+pytest>=7.0          # tests/test_paper_values.py
+mne>=1.5             # only for src/eeg_validation.py (downloads EEGMMIDB)
