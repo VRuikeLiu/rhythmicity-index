@@ -1,0 +1,6 @@
+constant,symbol,default,tolerance_low,tolerance_high,tol_low_pct,tol_high_pct,low_edge,high_edge,dz_min_over_sweep,dz_max_over_sweep,worst_p_over_sweep,rho_min,rho_max,max_frac_labels_changed
+strong coherence threshold,t_c,0.5,0.305,0.75,-39,50,ordering limit (must exceed weak coherence 0.3),"sweep limit (+50%), no failure found",1.416,1.428,8.034368364749361e-05,-0.0049,-0.004,0.0075
+weak coherence threshold,t_cw,0.3,0.15,0.423,-50,41,"sweep limit (−50%), no failure found","ρ(Q,RI) crosses +0.10",1.341,1.447,0.00013574965588833212,-0.0527,0.1157,0.0694
+strong shape threshold,t_r,0.4,0.24,0.548,-40,37,top-1%-Q fraction below RI=2 drops to 0.975,exemplar RI falls below 2 (to 1.64; ordering vs comparison run preserved),1.107,1.618,0.0007532774549239502,-0.0767,-0.0046,0.1628
+weak shape threshold,t_rw,0.2,0.102,0.242,-49,21,ordering limit (must exceed floor 0.1),"ρ(Q,RI) crosses −0.10",1.414,1.432,8.16946984516324e-05,-0.2066,0.0696,0.0606
+minimal-evidence floor,t_min,0.1,0.067,0.15,-33,50,"ρ(Q,RI) crosses −0.10","sweep limit (+50%), no failure found",1.151,1.672,0.0005414051026384409,-0.157,0.021,0.0774
