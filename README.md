@@ -10,14 +10,14 @@ that a waveform actually *repeats* — and a **rhythmicity index (RI)** that tes
 in the time domain instead, by requiring phase consistency **and** shape consistency at the
 same time.
 
-The headline result: across roughly 250,000 simulated runs, the single sharpest-spectrum
+The headline result: across 125,000 simulated runs, the single sharpest-spectrum
 signal in the entire sweep (Q ≈ 63.5) is broadband noise with no repeating waveform
 (RI = 1.62), while a run with less than half its Q (28.3) repeats cleanly every cycle
 (RI = 3.49). Q and RI rank the two in opposite orders. The same index, developed entirely on
 simulated signals and applied unchanged to human EEG, recovers the Berger effect.
 
 Everything the paper reports about individual signals is reproducible here from small
-processed files — **no rerunning of 250,000 simulations and no multi-GB downloads.**
+processed files — **no rerunning of 125,000 simulations and no multi-GB downloads.**
 
 ## Quickstart
 
@@ -90,6 +90,31 @@ simulation traces (periods of 2-6 timesteps) but too short for Figure 1's schema
 collapses Q to 1.0. `make_fig1_concept.py` therefore measures at `nperseg=2048`, which resolves
 the fundamental and gives Q = 8.5 — identical across its three panels, which is that figure's
 point. Pass `nperseg=` to `analyze()` when your own signal's period calls for it.
+
+## Revision additions (2026)
+
+Files added during peer-review revision:
+
+- `src/rhythmicity_locked.py` — the locked estimator specification behind all revised
+  numbers (capped compressive index map, fixed Welch convention, admissibility floors).
+- `src/rhythmicity_locked_freq.py` — the same estimator with a fine-grid
+  analysis-frequency refinement: the coherence term's frequency is located on a
+  zero-padded spectrum rather than the coarse Welch grid, which repairs a quantisation
+  failure on long-period signals (an exactly periodic 120-sample signal scores
+  c = 1.000 rather than 0.584 at the default grid).
+- `src/sweep_design.py` — the complete sweep specification: 5 networks x 5 seed
+  locations x 25 α x 20 β x 10 replicates = 125,000 runs, every run's RNG seed a pure
+  function of its design position (any run regenerable in isolation).
+- `results/per_run_results.csv.gz` — per-run Q (+ validity diagnostics), index
+  components and RI for all 125,000 runs.
+- `results/per_cell_summary.csv` — per-(network, location, α, β) cell summary with
+  Wilson 95% CIs on survival.
+- `results/sweep_summary.json`, `results/surrogate_test.json` — headline
+  distributional numbers, and the extreme-value test of the maximum Q against
+  phase-randomised and AR(1) surrogate families.
+- `results/specparam_results.csv.gz` — specparam (Donoghue et al. 2020) fits to every
+  surviving run's PSD, joinable 1:1 with the per-run table.
+- `data/fig1_panel_values.csv` — measured panel annotations for Figure 1.
 
 ## Repository layout
 

@@ -1,0 +1,4 @@
+panel,shape_mix_w,period_samples,samples_per_cycle,n_cycles,c,cbar,r,Phi,Psi,g_s,g_w,RI,label,Q,Q_bins_across,Q_n_segments,Q_resolution_limited,admissible
+A,0.0,119.9595,119.9595,400.14,1.0,1.0,0.3895,2.8571,0.9737,0.9737,3.8947,1.7432,WEAKLY_RHYTHMIC,24.41,1.393,22,True,True
+B,0.8,119.9621,119.9621,400.13,1.0,1.0,0.7369,2.8571,1.8422,1.8422,4.0,2.8422,RHYTHMIC,24.4313,1.392,22,True,True
+C,1.0,119.9642,119.9642,400.12,1.0,1.0,0.9981,2.8571,2.4952,2.4952,4.9904,3.4952,RHYTHMIC,24.4473,1.391,22,True,True

@@ -1,0 +1,36 @@
+{
+  "design": "5 networks x 5 locations x 25 alpha x 20 beta x 10 replicates = 125,000 runs (12,500 grid cells), 2500 steps each, window [500, 2000).",
+  "n_runs_tested": 82194,
+  "published_max_Q_claim": 63.5,
+  "observed_max_Q": 66.84723904450352,
+  "families": {
+    "phase_randomised": {
+      "n_families": 200,
+      "family_size": 82194,
+      "surrogate_max_mean": 68.21259654234947,
+      "surrogate_max_sd": 4.650267543172732,
+      "surrogate_max_min": 60.63077751364071,
+      "surrogate_max_max": 82.39162407595705,
+      "surrogate_max_q95": 77.26941969541933,
+      "surrogate_max_q99": 79.26604868111409,
+      "observed_max": 66.84723904450352,
+      "p_value_one_sided": 0.5771144278606966,
+      "observed_inside_surrogate_range": true,
+      "pooled_surrogate_median_Q": 10.519403159503725
+    },
+    "ar1_matched": {
+      "n_families": 200,
+      "family_size": 82194,
+      "surrogate_max_mean": 87.96802789516077,
+      "surrogate_max_sd": 3.305233862654928,
+      "surrogate_max_min": 81.50722770902414,
+      "surrogate_max_max": 99.7386854799906,
+      "surrogate_max_q95": 93.74278222184579,
+      "surrogate_max_q99": 97.62520438749269,
+      "observed_max": 66.84723904450352,
+      "p_value_one_sided": 1.0,
+      "observed_inside_surrogate_range": true,
+      "pooled_surrogate_median_Q": 13.266880255850808
+    }
+  }
+}
