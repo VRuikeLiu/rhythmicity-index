@@ -142,19 +142,32 @@ def test_eeg_berger_effect():
 # --- Figure 2 / extinction transition ---------------------------------------------
 
 def test_extinction_threshold():
-    """alpha_c = 0.0042 is the last fully-extinct alpha; alpha = 1 re-extinguishes."""
-    df = pd.read_csv(ROOT / "data" / "run_summary.csv")
-    sub = df[(df["network"] == "net_A") & (df["location_idx"] == 0)
-             & np.isclose(df["beta"], 0.05)].sort_values("alpha")
-    alpha = sub["alpha"].to_numpy()
-    survival = 1.0 - sub["extinction_prob"].to_numpy()
-    # alpha = 1 is the degenerate deterministic limit and is also fully extinct, so the
-    # transition is located below it.
-    below = alpha < 1.0
-    last_extinct = alpha[below][survival[below] == 0.0].max()
-    assert last_extinct == pytest.approx(0.0042, abs=1e-4)
-    # activity self-extinguishes again at the alpha = 1 endpoint
-    assert survival[np.isclose(alpha, 1.0)][0] == 0.0
+    """Zero-survivor floor at alpha <= 0.0042; fitted alpha_C = (5.03 +/- 0.03) x 10^-3;
+    alpha = 1 re-extinguishes. (Revision: alpha_C is now estimated by the
+    branching-process ML fit in figures/make_fig2_extinction.py, not quoted as the
+    last fully-extinct grid value, which is only a grid-spacing lower bound.)"""
+    df = pd.read_csv(ROOT / "results" / "per_cell_summary.csv")
+    pooled = df.groupby("alpha").agg(n=("n_runs", "sum"), k=("n_surviving", "sum"))
+    alpha = pooled.index.to_numpy()
+    # zero-survivor floor: no run survives at or below 0.0042 (30,000 runs)
+    low = pooled[alpha <= 0.00422]
+    assert low.n.sum() == 30000 and low.k.sum() == 0
+    # survival onset at the next grid value
+    onset = pooled.loc[alpha[alpha > 0.00422].min()]
+    assert onset.k / onset.n == pytest.approx(0.2026, abs=1e-4)
+    # the paper's fitted critical point (values written by make_fig2_extinction.py)
+    fits = pd.read_csv(ROOT / "results" / "fig2_alphaC_fits.csv")
+    pooled_fit = fits[fits.scope == "pooled"].iloc[0]
+    assert pooled_fit.alpha_c_ml == pytest.approx(5.03e-3, abs=0.01e-3)
+    assert pooled_fit.ci95_lo == pytest.approx(5.00e-3, abs=0.01e-3)
+    assert pooled_fit.ci95_hi == pytest.approx(5.06e-3, abs=0.01e-3)
+    # per-beta fits: all within 3% of 1/K = 0.005 (beta-independence)
+    per_beta = fits[fits.scope == "per_beta"]
+    assert len(per_beta) == 20
+    assert (np.abs(per_beta.alpha_c_ml - 5e-3) / 5e-3).max() < 0.03
+    # activity self-extinguishes again at the alpha = 1 endpoint (all 5,000 runs)
+    top = pooled.loc[1.0]
+    assert top.n == 5000 and top.k == 0
 
 
 # --- Index structure: the AND-across-criteria rule --------------------------------

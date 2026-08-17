@@ -9,8 +9,10 @@ from the outermost bins above half peak power. Q is resolution-dependent — see
 
 **Relationship to the published PNGs.** The `.png` files here are the output of the scripts in
 this directory, so the committed images, the scripts, and `tests/test_paper_values.py` are
-mutually consistent — re-running a script reproduces the committed file. `fig2_extinction.png`
-is byte-identical to the image in the published manuscript. Figures 1, 3 and 4 are equivalent
+mutually consistent — re-running a script reproduces the committed file. (An earlier note that
+`fig2_extinction.png` was byte-identical to the as-submitted manuscript image applied to the
+original single-network figure; the revision replaced that figure — see the Fig 2 section.)
+Figures 1, 3 and 4 are equivalent
 but not byte-identical: font availability and matplotlib version affect rasterisation, and
 annotations are measured rather than hand-carried — Fig 3's panel values are asserted against
 the sweep delivery table at render time, and Fig 1's shape-consistency and RI values differ in
@@ -62,23 +64,38 @@ consistency, separates them.
 
 ## Fig 2 — Extinct–active transition (`fig2_extinction.png`)
 
-Survival probability (1 − extinction probability) vs. α on a single frozen network:
-**net_A, location 0, β = 0.05**, one fixed initial firing node, log-scaled α, 10 replicates
-per α, 25 α values.
+**Revision (S6).** Two panels, computed from the locked-spec sweep's per-cell table:
+every survival point pools **250 runs = 5 network realisations × 5 seed-node locations ×
+10 replicates** (the original figure used 10 replicates on one frozen network with one
+seed node). **A)** survival vs. α at five β values (0.05, 0.25, 0.50, 0.75, 1.00) with
+95% Wilson CIs and the mean-field 1/K reference line. **B)** critical point fitted
+separately at each of the 20 β values (95% profile-likelihood CIs).
 
-- **α_c = 0.004217** (printed as 0.0042) — the last fully-extinct α below the endpoint.
-- Consistent with the mean-field branching-ratio picture (Kinouchi & Copelli 2006:
-  criticality at σ = 1; σ ≈ αK gives α ≈ 1/K = 0.005 for K = 200). Same order of magnitude —
-  the paper does not claim an exact match.
-- **α = 1 is a degenerate deterministic limit** and is *also* fully extinct (survival 0.0):
-  every resting node with an active neighbour fires at once, the whole population enters
-  refractoriness together, and nothing remains to re-ignite it. Any code locating the
-  transition must exclude this endpoint.
-- Two small irregularities reflect finite sampling, not real non-monotonicity: survival is
-  0.90 at both α = 0.0100 and α = 0.0133, and dips to 0.90 at α = 0.3162 within the
-  otherwise-full plateau.
+- **α_C = (5.03 ± 0.03) × 10⁻³** (95% CI) — maximum-likelihood fit of the mean-field
+  branching-process survival probability (s = 1 − exp(−(α/α_C)s)) to the 8 grid points
+  spanning the transition, pooled over β. Within 0.6% of the Kinouchi & Copelli (2006)
+  prediction α ≈ 1/K = 0.005 for K = 200.
+- The previously quoted **0.0042** is the last fully-extinct grid value (0 of 30,000 runs
+  survive at α ≤ 4.2 × 10⁻³): a *lower bound* whose 16% distance from 1/K is set by the
+  0.125-decade grid spacing, not a critical-point estimate.
+- **β-independence** (previously asserted, now shown): the five survival curves coincide;
+  per-β fitted α_C has no trend (Spearman ρ = 0.24, p = 0.30; max deviation from 1/K
+  2.7%); survival-vs-β rank correlation over all 500 grid cells ρ = 0.01 (p = 0.82).
+- **α = 1 is a degenerate deterministic limit** and is *also* fully extinct (all 5,000
+  runs): every resting node with an active neighbour fires at once, the whole population
+  enters refractoriness together, and nothing remains to re-ignite it. Any code locating
+  the transition must exclude this endpoint.
+- The old caption's "two small irregularities" were n = 10 sampling noise and are gone at
+  n = 250. One real feature remains: survival dips to **0.940 (Wilson CI 0.903–0.963)** at
+  α = 0.32, β = 0.05 (15/250 extinct, spread over all 5 networks and 5 locations; plus
+  2/250 at α = 0.42, β = 0.05; zero extinctions in 0.042 ≤ α ≤ 0.75 at any β ≥ 0.10).
+  Initial-cascade fizzle is impossible there (branching ratio αK ≈ 63), so these runs die
+  by later near-synchronous collective collapse into refractoriness — the α = 1 mechanism,
+  reachable stochastically at the lowest recovery probability.
 
-Reads `data/run_summary.csv`.
+Reads `results/per_cell_summary.csv`; writes `results/fig2_alphaC_fits.csv` alongside the
+PNG. The old single-network figure and its `data/run_summary.csv` input remain in the repo
+history.
 
 ---
 
