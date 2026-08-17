@@ -7,7 +7,7 @@ variants and all baseline metrics (identical epochs everywhere):
      poles are the standard proxy. Directly answers the reviewer's blink-asymmetry
      worry: contaminated epochs are excluded rather than statistically absorbed.
   R2 occipital PTP outlier: max channel PTP > subject's median + 4*1.4826*MAD over
-     the subject's own 60 epochs (both conditions pooled, condition-blind). A fixed
+     the subject's own 30 epochs (both conditions pooled, condition-blind). A fixed
      threshold is wrong here: occipital alpha itself is high-amplitude, so a fixed
      150 uV cut rejects MORE eyes-closed than eyes-open epochs (measured: 203 vs 149)
      and would bias against the very signal under test. Subject-calibrated MAD keeps
