@@ -10,11 +10,13 @@ that a waveform actually *repeats* — and a **rhythmicity index (RI)** that tes
 in the time domain instead, by requiring phase consistency **and** shape consistency at the
 same time.
 
-The headline result: across 125,000 simulated runs, the single sharpest-spectrum
-signal in the entire sweep (Q ≈ 63.5) is broadband noise with no repeating waveform
-(RI = 1.62), while a run with less than half its Q (28.3) repeats cleanly every cycle
-(RI = 3.49). Q and RI rank the two in opposite orders. The same index, developed entirely on
-simulated signals and applied unchanged to human EEG, recovers the Berger effect.
+The headline result: across 125,000 simulated runs (11,938 admissible under the
+estimator's sampling floors), Q and RI are uncorrelated — Spearman ρ = −0.005 — and
+every run in the top percentile of Q falls below the rhythmic threshold. A matched
+pair makes it concrete: two runs identical in design except the firing probability α
+order one way by Q (12.49 vs 2.40) and the opposite way by RI (1.342 vs 2.378). The
+same index, developed entirely on simulated signals and applied unchanged to human
+EEG, recovers the Berger effect.
 
 Everything the paper reports about individual signals is reproducible here from small
 processed files — **no rerunning of 125,000 simulations and no multi-GB downloads.**
@@ -80,9 +82,10 @@ Implemented in [`src/rhythmicity.py`](src/rhythmicity.py) (`compute_rhythmicity_
 
 Q is resolution-dependent, so the estimator settings are part of the measurement. The paper
 uses Welch with `nperseg = min(256, len(signal))` and takes the half-power bandwidth from the
-outermost bins above half peak power. **Changing `nperseg` changes Q substantially** — the same
-highest-Q trace reads 63.5 at 256 and 84.7 at 512. `src/spectral.py` defaults to the paper's
-convention, and `tests/test_paper_values.py` pins it.
+outermost bins above half peak power. **Changing `nperseg` changes Q substantially** — the shipped
+Figure-3B trace reads Q = 12.5 at 256 and 79.0 at 512 (where the locked estimator flags the
+value resolution-limited and undersegmented rather than reporting it as a linewidth).
+`src/spectral.py` defaults to the paper's convention, and `tests/test_paper_values.py` pins it.
 
 The segment length must also suit the *period* of the signal. The 256 default is right for the
 simulation traces (periods of 2-6 timesteps) but too short for Figure 1's schematic traces
@@ -130,14 +133,14 @@ rhythmicity-index/
 ├── figures/
 │   ├── make_fig1_concept.py     — Fig 1: Q is blind to shape (schematic)
 │   ├── make_fig2_extinction.py  — Fig 2: extinct–active transition
-│   ├── make_fig3_contrast.py    — Fig 3 + Table 1: highest-Q vs highest-RI run
+│   ├── make_fig3_contrast.py    — Fig 3: Q–RI scatter + single-parameter contrast
 │   ├── make_fig4_eeg.py         — Fig 4: EEG Berger effect
 │   ├── CAPTIONS.md              — run identities and measured values for every panel
 │   └── fig*.png                 — rendered figures, 300 dpi
 ├── data/
 │   ├── run_summary.csv          — one row per (network, location, α, β) gridpoint
 │   ├── eeg_rhythmicity.csv      — per-subject, per-condition mean RI (20 subjects × {EO, EC})
-│   └── example_traces/          — the shipped highest-Q activity trace (.npy and .csv)
+│   └── example_traces/          — the two Figure-3 traces (.npy and .csv)
 └── tests/test_paper_values.py   — regression tests pinning the published numbers
 ```
 
@@ -152,17 +155,19 @@ from the model seed.
 ## Data notes
 
 **`data/run_summary.csv`** is aggregated **per gridpoint** — each row averages the surviving
-replicates at one (network, location, α, β) cell. It is the right file for the extinction
-transition and for population-level views, but note that the per-gridpoint means are *not* the
-individual-run values in Figure 3 / Table 1: aggregation flattens extremes, so the largest Q in
-this table is 42.5, whereas the single sharpest *run* in the sweep reaches 63.5. Individual-run
-values are reproduced from the shipped trace and the model seed
-(see `figures/make_fig3_contrast.py`), not read from this table.
+replicates at one (network, location, α, β) cell. It is the right file for population-level
+views, but per-gridpoint means are *not* individual-run values: aggregation flattens extremes.
+Individual-run values live in `results/per_run_results.csv.gz` (125,000 rows, the paper's
+record); Figure 3 and Table 1 read from it (see `figures/make_fig3_contrast.py`).
 
-**`data/example_traces/fig3A_highestQ.npy`** is the activity trace of that single highest-Q
-run, shipped because it comes from the robustness sweep. The highest-RI run is not shipped —
-it is regenerated exactly from `generate_er_graph(N=20000, K=200, seed=12345)` plus
-`simulate(alpha=0.562341, beta=1.00, n_steps=2500, init_firing=1, seed=0)`.
+**`data/example_traces/fig3B_sharpQ.npy` / `fig3C_highestRI.npy`** are the two Figure-3
+traces (run_seed 54202 and 51802). Both are also regenerable in isolation, bitwise-identically,
+from their design-position seeds via `src/sweep_sim.py` + `src/sweep_design.py` (net_C =
+graph seed 14345, seed node 0; α = 0.421697 / 0.013335, β = 0.05, replicate 2). The previous
+revision's exemplar pair (the Q ≈ 63.5 run and the period-3 RI = 3.49 run) is retired: the
+former's Q is a resolution ceiling of the spectral grid and lies inside the surrogate-maximum
+distribution (`results/surrogate_test.json`), and the latter fails the ≥ 8 samples-per-cycle
+admissibility floor.
 
 **Effect size in the EEG validation.** The manuscript reports Cohen's d = 1.08. Recomputing
 from `data/eeg_rhythmicity.csv` gives a *larger* effect — paired dz = 1.69, pooled d = 1.94

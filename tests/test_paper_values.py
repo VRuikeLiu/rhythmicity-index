@@ -27,44 +27,63 @@ WIN = (500, 2000)
 
 
 @pytest.fixture(scope="module")
-def trace_a():
-    return np.load(ROOT / "data" / "example_traces" / "fig3A_highestQ.npy").astype(float)
+def trace_b():
+    return np.load(ROOT / "data" / "example_traces" / "fig3B_sharpQ.npy").astype(float)
+
+
+@pytest.fixture(scope="module")
+def trace_c():
+    return np.load(ROOT / "data" / "example_traces" / "fig3C_highestRI.npy").astype(float)
 
 
 # --- Table 1 / Figure 3 -----------------------------------------------------------
+# Panel values are pinned to the sweep delivery table (results/per_run_results.csv.gz),
+# the paper's record. Q, c and the period regenerate bit-for-bit across machines; the
+# shape term r (hence RI) can differ in the last digits across SciPy builds, so RI
+# tolerances are looser (see README "Reproducibility notes").
 
-def test_panel_a_matches_table1(trace_a):
-    """Highest-Q run: Q ~ 63, RI = 1.62, and it is NOT classified rhythmic."""
-    res = analyze(trace_a[WIN[0]:WIN[1]], fs=1.0)
-    assert res["Q"] == pytest.approx(63.5, abs=0.5)
-    assert res["RI"] == pytest.approx(1.62, abs=0.01)
-    assert res["rhythmicity_class"] == "WEAKLY_RHYTHMIC"
+def test_panel_b_matches_table1(trace_b):
+    """Sharp-spectrum comparison run: Q = 12.491 (not resolution-limited), weakly rhythmic."""
+    from rhythmicity_locked_freq import analyze_s2
+    res = analyze_s2(trace_b[WIN[0]:WIN[1]], fs=1.0)
+    assert res["Q"] == pytest.approx(12.491, abs=0.001)
+    assert not res["Q_resolution_limited"]
+    assert res["c"] == pytest.approx(0.229168, abs=1e-4)
+    assert res["period"] == pytest.approx(12.0887, abs=0.001)
+    assert res["RI"] == pytest.approx(1.342, abs=0.05)
+    assert res["label"] == "WEAKLY_RHYTHMIC"
+
+
+def test_panel_c_matches_table1(trace_c):
+    """Highest-RI admissible run: RI = 2.378 at period 26.08, rhythmic, ordinary Q."""
+    from rhythmicity_locked_freq import analyze_s2
+    res = analyze_s2(trace_c[WIN[0]:WIN[1]], fs=1.0)
+    assert res["Q"] == pytest.approx(2.398, abs=0.001)
+    assert res["period"] == pytest.approx(26.081, abs=0.001)
+    assert res["samples_per_cycle"] >= 8 and res["n_cycles"] >= 10
+    assert res["RI"] == pytest.approx(2.378, abs=0.02)
+    assert res["label"] == "RHYTHMIC"
+
+
+def test_q_and_ri_rank_the_two_runs_oppositely(trace_b, trace_c):
+    """The paper's contrast: Q ranks B > C, the rhythmicity index ranks C > B."""
+    from rhythmicity_locked_freq import analyze_s2
+    b = analyze_s2(trace_b[WIN[0]:WIN[1]], fs=1.0)
+    c = analyze_s2(trace_c[WIN[0]:WIN[1]], fs=1.0)
+    assert b["Q"] > c["Q"]
+    assert c["RI"] > b["RI"]
 
 
 @pytest.mark.slow
-def test_panel_c_matches_table1():
-    """Highest-RI run, regenerated from seed: Q ~ 28, RI = 3.49, RHYTHMIC."""
-    import model
-    adj = model.generate_er_graph(N=20_000, K=200, seed=12345)
-    trace = np.asarray(model.simulate(adj, alpha=0.562341, beta=1.00,
-                                      n_steps=2500, init_firing=1, seed=0), dtype=float)
-    res = analyze(trace[WIN[0]:WIN[1]], fs=1.0)
-    assert res["Q"] == pytest.approx(28.3, abs=0.5)
-    assert res["RI"] == pytest.approx(3.49, abs=0.02)
-    assert res["rhythmicity_class"] == "RHYTHMIC"
-
-
-@pytest.mark.slow
-def test_q_and_ri_rank_the_two_runs_oppositely(trace_a):
-    """The paper's central claim: Q ranks a > c, the rhythmicity index ranks c > a."""
-    import model
-    adj = model.generate_er_graph(N=20_000, K=200, seed=12345)
-    trace_c = np.asarray(model.simulate(adj, alpha=0.562341, beta=1.00,
-                                        n_steps=2500, init_firing=1, seed=0), dtype=float)
-    a = analyze(trace_a[WIN[0]:WIN[1]], fs=1.0)
-    c = analyze(trace_c[WIN[0]:WIN[1]], fs=1.0)
-    assert a["Q"] > c["Q"]
-    assert c["RI"] > a["RI"]
+def test_figure3_traces_regenerate_from_seed(trace_b, trace_c):
+    """Both shipped traces regenerate bitwise from their design-position seeds."""
+    import sweep_sim, sweep_design as D
+    adj = sweep_sim.generate_er_graph(D.N_NODES, D.K_DEGREE, D.GRAPH_SEEDS[2])  # net_C
+    node = int(D.seed_nodes(2)[0])
+    for seed, alpha, shipped in ((54202, 0.42169650342858224, trace_b),
+                                 (51802, 0.013335214321633242, trace_c)):
+        tr = sweep_sim.simulate_cpu(adj, alpha, 0.05, 2500, node, seed)
+        assert np.array_equal(tr, shipped.astype(tr.dtype))
 
 
 # --- Figure 1 / concept schematic -------------------------------------------------
@@ -96,11 +115,15 @@ def test_fig1_q_is_identical_across_panels():
 
 # --- Q-factor convention ----------------------------------------------------------
 
-def test_q_depends_on_nperseg(trace_a):
-    """Q is resolution-dependent; the paper's value requires nperseg=256."""
-    seg = trace_a[WIN[0]:WIN[1]]
-    assert compute_q_factor(seg, nperseg=256)["Q"] == pytest.approx(63.5, abs=0.5)
-    assert compute_q_factor(seg, nperseg=512)["Q"] > 70.0
+def test_q_depends_on_nperseg(trace_b):
+    """Q is resolution-dependent; the paper's convention is nperseg=256 (locked spec)."""
+    from rhythmicity_locked import q_factor
+    seg = trace_b[WIN[0]:WIN[1]]
+    at256 = q_factor(seg, fs=1.0, nperseg=256)
+    at512 = q_factor(seg, fs=1.0, nperseg=512)
+    assert at256["Q"] == pytest.approx(12.491, abs=0.001)
+    assert not at256["resolution_limited"]
+    assert at512["Q"] > 70.0 and at512["resolution_limited"] and at512["undersegmented"]
 
 
 # --- Figure 4 / EEG validation ----------------------------------------------------

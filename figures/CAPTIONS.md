@@ -11,11 +11,10 @@ from the outermost bins above half peak power. Q is resolution-dependent — see
 this directory, so the committed images, the scripts, and `tests/test_paper_values.py` are
 mutually consistent — re-running a script reproduces the committed file. `fig2_extinction.png`
 is byte-identical to the image in the published manuscript. Figures 1, 3 and 4 are equivalent
-but not byte-identical: font availability and matplotlib version affect rasterisation, and two
-annotations now show measured rather than hand-carried numbers — Fig 3 prints Q = 63.5 where the
-manuscript typeset "≈63" (rounding 63.5 to an integer would print 64 and contradict the text),
-and Fig 1's shape-consistency and RI values differ in the second decimal (see the Fig 1 section
-below). No underlying data, parameter, or qualitative claim differs anywhere.
+but not byte-identical: font availability and matplotlib version affect rasterisation, and
+annotations are measured rather than hand-carried — Fig 3's panel values are asserted against
+the sweep delivery table at render time, and Fig 1's shape-consistency and RI values differ in
+the second decimal (see the Fig 1 section below). No underlying data, parameter, or qualitative claim differs anywhere.
 
 **Measured vs. hardcoded.** Every annotated number in every figure is now computed at render
 time from the plotted trace. Nothing is hardcoded — which is what let the figures and Table 1
@@ -85,33 +84,41 @@ Reads `data/run_summary.csv`.
 
 ## Fig 3 — Spectral sharpness vs. genuine repetition (`fig3_contrast.png`) — **and Table 1**
 
-Two runs over the identical stationary window (**timesteps 500–2000**, well beyond the
-transient), each with a 60-step detail (timesteps 1500–1560) so the cycle-to-cycle waveform is
-visible. Both panels' annotations are measured at render time by `src/analyze.py` — nothing is
-hardcoded, so the figure and Table 1 cannot drift apart.
+Three panels. **A)** the joint distribution of Q and RI over the 11,938 admissible surviving
+runs (Spearman ρ = −0.005): spectral sharpness carries no rank information about waveform
+repetition, and every top-percentile-Q run falls below the rhythmic threshold. **B)** and
+**C)** a single-parameter contrast: identical design (net_C, seed node 0, β = 0.05,
+replicate 2) except α. Panel annotations quote the sweep delivery table (`results/`), the
+paper's record; the script re-measures both traces at render time and asserts Q, c and the
+period agree with the table.
 
 | Panel | Run | α | β | **Q** | **RI** | class |
 |---|---|---|---|---|---|---|
-| **3a** | highest-Q run in the entire sweep | 0.75 | 0.10 | **63.5** | **1.62** | WEAKLY_RHYTHMIC |
-| **3c** | highest-RI run in the sweep | 0.562341 | 1.00 | **28.3** | **3.49** | RHYTHMIC |
+| **B** | sharp-spectrum comparison (run_seed 54202) | 0.421697 | 0.05 | **12.491** (94th pctile) | **1.342** | WEAKLY_RHYTHMIC |
+| **C** | highest-RI admissible run (run_seed 51802) | 0.013335 | 0.05 | **2.398** | **2.378** | RHYTHMIC |
 
-Component measures for 3a: `c` = 0.082, `c̄` = 0.162, `r` = 0.612 — the shape term carries what
-little score there is; phase coherence is near zero, which is why a Q of 63.5 does not survive
-the AND gate. For 3c: `c` = 0.976, `c̄` = 0.976, `r` = 0.998.
+Component measures for B: `c` = 0.229, `c̄` = 0.190, `r` = 0.304 — a sharp, honestly-resolved
+peak (6.8 bins across) whose phase and shape consistency all sit below their thresholds. For
+C: `c` = 0.568, `c̄` = 0.545, `r` = 0.551 at a measured period of 26.08 timesteps (26.1
+samples/cycle, 57.5 cycles in the window).
 
-**Provenance.** Panel 3a is the shipped trace `data/example_traces/fig3A_highestQ.npy`. Panel
-3c is regenerated from seed: `generate_er_graph(N=20000, K=200, seed=12345)` then
-`simulate(alpha=0.562341, beta=1.00, n_steps=2500, init_firing=1, seed=0)`.
+**Provenance.** Both traces ship in `data/example_traces/` and regenerate bitwise-identically
+from their design-position seeds (`src/sweep_sim.py`, `src/sweep_design.py`).
 
-**Headline it supports:** ranked by Q, 3a > 3c (63.5 vs 28.3); ranked by RI the order reverses,
-3c > 3a (3.49 vs 1.62). The sharpest spectral peak in ~250,000 runs belongs to a signal whose
-waveform does not repeat.
+**Headline it supports:** ranked by Q, B > C (12.49 vs 2.40); ranked by RI the order
+reverses, C > B (2.378 vs 1.342) — with everything but α held fixed. The distributional
+panel shows this is the rule, not an anecdote: ρ(Q, RI) = −0.005 across the admissible sweep.
+
+**Retired exemplars.** Earlier revisions contrasted the sweep-maximum-Q run (Q ≈ 63.5,
+α = 0.75, β = 0.10) with the period-3 highest-RI run (RI = 3.49, α = 0.562, β = 1.00). Both
+are retired: the former's Q is resolution-limited (a ceiling of the spectral grid — measured
+on an adequately resolved window the same run gives Q ≈ 1.0) and lies inside the
+surrogate-maximum distribution (`results/surrogate_test.json`); the latter fails the ≥ 8
+samples-per-cycle admissibility floor (a 3-sample cycle has zero shape degrees of freedom).
 
 **Note on `run_summary.csv`.** These are individual-run values. `run_summary.csv` is aggregated
-per gridpoint and its largest Q is 42.5 — the extremes are averaged away — so Table 1 cannot be
-read off that table. This is expected, not a discrepancy.
-
----
+per gridpoint and its extremes are averaged away, so Table 1 cannot be read off that table.
+This is expected, not a discrepancy.
 
 ## Fig 4 — EEG Berger validation (`fig4_eeg.png`)
 
