@@ -122,16 +122,27 @@ This is expected, not a discrepancy.
 
 ## Fig 4 — EEG Berger validation (`fig4_eeg.png`)
 
-Per-subject paired mean RI, eyes-open vs eyes-closed. EEGMMIDB (PhysioNet), **20 subjects,
-600 four-second epochs**, occipital channels O1/Oz/O2, alpha band 8–13 Hz. Grey lines connect
-conditions within a subject; the red line is the condition mean.
+Per-subject mean RI, eyes-open vs eyes-closed, from the REVISED broadband pipeline
+(`src/eeg_validation_s4.py` + `src/eeg_score_all_s4.py`). EEGMMIDB (PhysioNet),
+**20 subjects, 600 four-second epochs total across conditions**; occipital channels
+O1/Oz/O2 averaged after 1–45 Hz zero-phase FIR filtering; per-epoch dominant frequency
+estimated freely over 3–20 Hz (not fixed to the alpha band); condition-blind artifact
+rejection (blink proxy on Fp1/Fpz/Fp2, subject-calibrated occipital amplitude
+threshold) leaves 415 accepted epochs of which 365 pass the admissibility floors.
 
-- **EO mean RI = 0.566**, **EC mean RI = 1.523** (Δ = 0.956).
-- **19/20 subjects increase** when the eyes close.
-- Effect size: the manuscript reports **Cohen's d = 1.08**; recomputed from
-  `data/eeg_rhythmicity.csv` the effect is larger — **paired dz = 1.69, pooled d = 1.94**
-  (printed by `make_fig4_eeg.py`). The manuscript value is the more conservative one; the
-  direction, group means, and "large effect" characterization hold either way.
+- Filled circles: 15 subjects with artifact-free data in both conditions (grey lines
+  connect within subject). Open circles: eyes-closed means of the 5 subjects with no
+  artifact-free eyes-open epochs (excluded from paired tests).
+- Red squares: condition means ± 95% CI over the paired n = 15.
+- **EO mean RI = 1.178**, **EC mean RI = 1.904**; Δ = 0.726 (95% CI 0.442–1.010);
+  paired t(14) = 5.49, p = 8e-5; Wilcoxon W = 0, p = 6e-5; **paired dz = 1.42**,
+  pooled d = 1.63; **15/15 paired subjects increase**. Without rejection: dz = 1.49,
+  20/20 increase.
+- Dashed reference lines at RI = 1 (weakly rhythmic) and RI = 2 (rhythmic).
+- Numbers: `results/s4_eeg_stats.json`; per-epoch table `results/s4_eeg_per_epoch.csv.gz`;
+  per-subject table `results/s4_eeg_per_subject.csv`.
 
-Per-subject values come from `src/eeg_validation.py`, which downloads the EEG via
-`mne.datasets.eegbci`; the figure script only plots `data/eeg_rhythmicity.csv`.
+The legacy narrowband pipeline (`src/eeg_validation.py`, `data/eeg_rhythmicity.csv`,
+plotted by `make_fig4_eeg.py`) is retained for provenance of the originally submitted
+figure; the original submission's d = 1.08 was epoch-level pooling of that pipeline's
+600 values.

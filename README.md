@@ -169,11 +169,18 @@ former's Q is a resolution ceiling of the spectral grid and lies inside the surr
 distribution (`results/surrogate_test.json`), and the latter fails the ≥ 8 samples-per-cycle
 admissibility floor.
 
-**Effect size in the EEG validation.** The manuscript reports Cohen's d = 1.08. Recomputing
-from `data/eeg_rhythmicity.csv` gives a *larger* effect — paired dz = 1.69, pooled d = 1.94
-(19/20 subjects increase when the eyes close) — and `make_fig4_eeg.py` prints these. The
-manuscript value is the more conservative of the two; the direction, the group means
-(0.57 → 1.52) and the "large effect" characterization are unaffected.
+**Effect size in the EEG validation (revised analysis).** The original submission reported
+Cohen's d = 1.08; that number pooled all 600 epochs as if independent (the correct unit of
+inference is the subject, n = 20). The revised pipeline (`src/eeg_validation_s4.py`) fixes
+this and three further defects: it analyses broadband (1–45 Hz) data with each epoch's
+dominant frequency estimated from its own spectrum rather than pre-filtering to 8–13 Hz,
+adds condition-blind artifact rejection (blink proxy on Fp1/Fpz/Fp2 + subject-calibrated
+amplitude threshold), and computes the analysis frequency with sub-bin refinement rather
+than the coarse 0.625 Hz Welch grid. Result (`results/s4_eeg_stats.json`): eyes-open
+mean RI 1.178 → eyes-closed 1.904, paired t(14) = 5.49, p = 8e-5, paired dz = 1.42
+(15/15 artifact-free subjects increase; without rejection dz = 1.49, 20/20 increase).
+The legacy single-filter pipeline (`src/eeg_validation.py`) and its per-subject table
+(`data/eeg_rhythmicity.csv`) are retained for provenance; its subject-level dz is 1.69.
 
 ## Data & code availability
 
