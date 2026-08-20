@@ -109,7 +109,7 @@ def main():
                  fontsize=7, color="0.15")
     axA.set_xlabel("Q-factor (log scale)")
     axA.set_ylabel("Rhythmicity index")
-    axA.set_title("Spectral sharpness carries no information about waveform repetition",
+    axA.set_title("Spectral sharpness does not track waveform repetition in this sweep",
                   fontsize=8, loc="left")
     axA.set_xticks([0.3, 1, 3, 10, 30], ["0.3", "1", "3", "10", "30"])
     axA.margins(0.04)

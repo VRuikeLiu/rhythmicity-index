@@ -20,6 +20,11 @@ RI = 2; exemplar (run_seed 51802) RI >= 2 and above comparison (run_seed 54202).
 Outputs: results/s7_sensitivity_table.csv, results/s7_derived_axes_table.csv,
 results/s7_joint_perturbation.csv, results/s7_tolerance_summary.csv,
 figures/fig_s7_sensitivity.png.
+
+Note: the shipped s7_sensitivity_table.csv and s7_joint_perturbation.csv carry
+additional diagnostic columns produced by the full project pipeline; this script
+regenerates the core columns (identical values where they overlap). The shipped
+s7_derived_axes_table.csv matches this script's output exactly.
 """
 import numpy as np
 import pandas as pd
@@ -64,7 +69,7 @@ def ordering_ok(thr):
 
 def main():
     per_run = pd.read_csv("results/per_run_results.csv.gz")
-    eeg = pd.read_csv("results/s4_per_epoch_full.csv")
+    eeg = pd.read_csv("results/s4_eeg_per_epoch.csv.gz")
 
     sim = per_run[per_run["admissible"] == True].copy()
     c_s, cb_s, r_s = (sim[k].to_numpy() for k in ("c", "cbar", "r"))
@@ -114,6 +119,34 @@ def main():
                              ordering_valid=ordering_ok(thr), **eo, **so,
                              holds=holds(eo, so)))
     pd.DataFrame(rows).to_csv("results/s7_sensitivity_table.csv", index=False)
+
+    # Derived axes: free the two curve-coherence thresholds (published derivation
+    # t_cbar = max(0.35, t_cw + 0.05) = 0.35, t_cbarw = max(0.20, t_cw - 0.05) = 0.25)
+    # and sweep each around ITS OWN default value.
+    DERIVED = dict(t_cbar=0.35, t_cbarw=0.25)
+    drows = []
+    for const, dflt in DERIVED.items():
+        for m in np.round(np.arange(0.50, 1.5001, 0.05), 2):
+            thr = dict(DEFAULTS)
+            kw = {const: round(dflt * m, 6)}
+            d = prim.assign(RI=ri_param(prim["c_v1"], prim["cbar_v1"],
+                                        prim["r_v1"], **thr, **kw))
+            subj = (d.groupby(["subject", "condition"])["RI"]
+                     .mean().unstack().dropna())
+            dv = subj["EC"] - subj["EO"]
+            t, p = st.ttest_rel(subj["EC"], subj["EO"])
+            ri = ri_param(c_s, cb_s, r_s, **thr, **kw)
+            lab = np.where(ri >= 2, 2, np.where(ri >= 1, 1, 0))
+            drows.append(dict(constant=const, default=dflt, multiplier=m,
+                              value=kw[const], ordering_valid=ordering_ok(thr),
+                              dz=dv.mean() / dv.std(ddof=1), p=p,
+                              n_up=int((dv > 0).sum()),
+                              rho_Q_RI=float(st.spearmanr(Q_s, ri).statistic),
+                              top1_frac_below2=float((ri[topmask] < 2).mean()),
+                              frac_label_changed=float((lab != lab0).mean()),
+                              exemplar_RI=float(ri[i_ex]),
+                              comparison_RI=float(ri[i_cmp])))
+    pd.DataFrame(drows).to_csv("results/s7_derived_axes_table.csv", index=False)
 
     rng = np.random.default_rng(20260817)
     jrows = []

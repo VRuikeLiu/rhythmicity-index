@@ -102,8 +102,8 @@ history.
 ## Fig 3 — Spectral sharpness vs. genuine repetition (`fig3_contrast.png`) — **and Table 1**
 
 Three panels. **A)** the joint distribution of Q and RI over the 11,938 admissible surviving
-runs (Spearman ρ = −0.005): spectral sharpness carries no rank information about waveform
-repetition, and every top-percentile-Q run falls below the rhythmic threshold. **B)** and
+runs (Spearman ρ = −0.005): in this sweep, spectral sharpness does not track waveform
+repetition in rank, and every top-percentile-Q run falls below the rhythmic threshold. **B)** and
 **C)** a single-parameter contrast: identical design (net_C, seed node 0, β = 0.05,
 replicate 2) except α. Panel annotations quote the sweep delivery table (`results/`), the
 paper's record; the script re-measures both traces at render time and asserts Q, c and the
