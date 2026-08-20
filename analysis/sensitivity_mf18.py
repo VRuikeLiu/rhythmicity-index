@@ -23,7 +23,12 @@ figures/fig_s7_sensitivity.png.
 
 Note: the shipped s7_sensitivity_table.csv and s7_joint_perturbation.csv carry
 additional diagnostic columns produced by the full project pipeline; this script
-regenerates the core columns (identical values where they overlap). The shipped
+regenerates the core columns with identical values (verified: all 105 sensitivity
+rows and all 2,000 joint rows match exactly on every overlapping column, and the
+shipped 'hold' flags agree with this script's 'holds' on all rows). Column-name
+mapping for the joint table: shipped m_t_* columns hold ABSOLUTE threshold values
+(matching this script's t_*), and shipped exemplar_RI / comparison_RI /
+frac_label_changed correspond to ex / cmp / changed here. The shipped
 s7_derived_axes_table.csv matches this script's output exactly.
 """
 import numpy as np
